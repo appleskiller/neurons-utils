@@ -3,7 +3,7 @@
 ## install
 
 ```
-npm install @neurons/utils
+npm install neurons-utils
 ```
 
 ## Usage
@@ -16,5 +16,5 @@ npm run test
 
 ## Who's using?
 
-[These npm modules depend on @neurons/utils.](https://www.npmjs.com/browse/depended/@neurons/utils)
+[These npm modules depend on neurons-utils.](https://www.npmjs.com/browse/depended/neurons-utils)
 
