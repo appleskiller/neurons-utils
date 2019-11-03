@@ -2,6 +2,7 @@ import { isDefined } from './utils/typeutils';
 
 export * from './utils/asyncutils';
 export * from './utils/cacheutils';
+export * from './utils/colorutils';
 export * from './utils/decoratorutils';
 export * from './utils/mathutils';
 export * from './utils/osutils';
@@ -10,6 +11,8 @@ export * from './utils/dateutils';
 export * from './utils/urlutils';
 export * from './utils/arrayutils';
 export * from './utils/objectutils';
+export * from './utils/geoutils';
+export * from './utils/geometryutils';
 
 export class Map<K, V> {
     private _keys: K[] = [];
