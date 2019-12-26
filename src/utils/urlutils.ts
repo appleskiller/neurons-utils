@@ -146,3 +146,11 @@ export function isUrl(value): boolean {
     return urlRegexp.test(value);
 }
 
+export function basename(url: string): string {
+    let idx = url.lastIndexOf('/')
+    idx = idx > -1 ? idx : url.lastIndexOf('\\')
+    if (idx < 0) {
+        return url
+    }
+    return url.substring(idx + 1);
+}
