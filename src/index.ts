@@ -2,17 +2,18 @@ import { isDefined } from './utils/typeutils';
 
 export * from './utils/asyncutils';
 export * from './utils/cacheutils';
-export * from './utils/colorutils';
 export * from './utils/decoratorutils';
-export * from './utils/mathutils';
 export * from './utils/osutils';
 export * from './utils/typeutils';
 export * from './utils/dateutils';
-export * from './utils/urlutils';
 export * from './utils/arrayutils';
 export * from './utils/objectutils';
-export * from './utils/geoutils';
-export * from './utils/geometryutils';
+
+import * as colorutils from './utils/colorutils';
+import * as urlutils from './utils/urlutils';
+import * as geoutils from './utils/geoutils';
+import * as geometryutils from './utils/geometryutils';
+import * as mathutils from './utils/mathutils';
 
 export class Map<K, V> {
     private _keys: K[] = [];
@@ -58,4 +59,17 @@ export class Map<K, V> {
         this._keys = [];
         this._values = [];
     }
+    forEach(fn: (key: K, value: V) => void) {
+        if (fn) {
+            for (var i: number = 0; i < this._keys.length; i++) {
+                fn(this._keys[i], this._values[i]);
+            }
+        }
+    }
 }
+
+export const color = { ...colorutils };
+export const url = { ...urlutils };
+export const geo = { ...geoutils };
+export const geometry = { ...geometryutils };
+export const math = { ...mathutils };
