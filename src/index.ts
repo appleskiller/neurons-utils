@@ -66,6 +66,16 @@ export class Map<K, V> {
             }
         }
     }
+    find(fn: (key: K, value: V) => boolean): [K, V] {
+        if (fn) {
+            for (var i: number = 0; i < this._keys.length; i++) {
+                if (fn(this._keys[i], this._values[i])) {
+                    return [this._keys[i], this._values[i]];
+                }
+            }
+        }
+        return null;
+    }
 }
 
 export const color = { ...colorutils };
