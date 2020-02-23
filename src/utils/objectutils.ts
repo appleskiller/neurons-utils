@@ -10,20 +10,26 @@ export function uniqueId(prefix: string) {
     return prefix + '_' + counter.count;
 }
 
+function isElementNode(value) {
+    return Node !== undefined && value instanceof Node;
+}
+
 /**
  * 合并对象。
  * 深合并两个或更多的对象，并返回一个新的对象。
  * 如果第一个参数为true，则第二个对象的内容将拷贝到第一个对象上。
- * 注意：与jQuery.extend(true)不同的是
+ * 注意：
  * 1. 不深度合并数组对象
  * 2. 不复制原型链上的属性。
+ * 3. 不复制HTML元素
+ * 4. 深合并时，对于目标对象尚不存在属性值的情况，将创建新的对象进行merge
  */
 export function merge(...args): any {
     let i,
         len,
         ret = {};
     const doCopy = function (copy, original) {
-        if (typeof original !== 'object') {
+        if (!original || typeof original !== 'object' || isDate(original) || isElementNode(original)) {
             return original;
         }
         let value, key;
@@ -34,7 +40,7 @@ export function merge(...args): any {
         for (key in original) {
             if (original.hasOwnProperty(key)) {
                 value = original[key];
-                if (value && typeof value === 'object' && !isDate(value)) {
+                if (value && typeof value === 'object' && !isDate(value) && !isElementNode(value)) {
                     if (!isArray(value)) {
                         // 如果copy[key]值不是object，则直接赋值
                         if (!copy[key] || typeof copy[key] !== 'object' || isDate(copy[key])) {
