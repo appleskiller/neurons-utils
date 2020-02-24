@@ -1,6 +1,6 @@
-import { globalCache } from './cacheutils';
-import { isDate, isArray, isEmpty, isDefined, isPlainObject } from './typeutils';
 import { isBrowser } from './osutils';
+import { isDate, isArray, isEmpty, isDefined, isPlainObject } from './typeutils';
+import { globalCache } from './cacheutils';
 
 const counter = globalCache('uniqueCounter', {
     count: 0

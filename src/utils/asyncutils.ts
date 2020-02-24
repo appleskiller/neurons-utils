@@ -1,6 +1,6 @@
-import { globalCache } from './cacheutils';
-import { isDefined } from './typeutils';
 import { isBrowser } from './osutils';
+import { isDefined } from './typeutils';
+import { globalCache } from './cacheutils';
 
 export interface ObservableLike<T> {
     subscribe(next?: (value: T) => void, error?: (error: any) => void, complete?: () => void): any;
