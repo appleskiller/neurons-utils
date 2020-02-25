@@ -1,11 +1,8 @@
 
-declare const global: any;
 /**
  * Window or Global or {};
  */
-export const globalContext: any = typeof window !== 'undefined' ? window
-                                : (typeof global !== 'undefined') ? global
-                                : {};
+export const globalContext: any = this;
 const __cache = {};
 globalContext.__NE_GLOBAL__ = globalContext.__NE_GLOBAL__ || {
     cache: function (key, defaultValue) {

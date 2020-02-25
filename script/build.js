@@ -17,8 +17,8 @@ const name = (package.name.charAt(0) === '@') ? package.name.slice(1).replace('/
 // auto name amd id
 const amdId = package.name;
 // intro
-const intro = `var globalContext = (typeof window !== 'undefined') ? window : (typeof global !== 'undefined') ? global : {};
-if (!globalContext['${amdId}']) { globalContext['${amdId}'] = exports; }`;
+const intro = `var __globalContext = (typeof window !== 'undefined') ? window : (typeof global !== 'undefined') ? global : {};
+if (!__globalContext['${amdId}']) { __globalContext['${amdId}'] = exports; }`;
 // input
 const inputFile = 'src/index.ts';
 const buildins = {}
@@ -68,9 +68,8 @@ const baseInputOption = {
 // complie typescript
 // ================================================
 
-util.exec(`tsc -p tsconfig.json -d --declarationDir dist --outDir dist`);
+util.exec(`tsc -p tsconfig.json -d --declarationDir dist --outDir dist/out-tsc`);
 package.typings = `${inputBaseName}.d.ts`;
-package.main = `${inputBaseName}.js`;
 
 async function buildAll() {
     // ------------------------------------------------
@@ -93,7 +92,7 @@ async function buildAll() {
     });
     console.log(`${inputFile} -> dist/umd/${name}.min.js ...`);
     // update package
-    // package.main = `umd/${name}.min.js`;
+    package.main = `umd/${name}.min.js`;
     // ------------------------------------------------
     // write package.json and copy files
     // ================================================

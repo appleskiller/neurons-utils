@@ -1,13 +1,64 @@
-import { isDefined } from './utils/typeutils';
 
-export * from './utils/osutils';
-export * from './utils/typeutils';
-export * from './utils/cacheutils';
-export * from './utils/asyncutils';
-export * from './utils/decoratorutils';
-export * from './utils/dateutils';
-export * from './utils/arrayutils';
-export * from './utils/objectutils';
+export {
+    isBrowser,
+    isDomLevel2,
+} from './utils/osutils';
+export {
+    isDefined,
+    isArray,
+    isDate,
+    isArrayBuffer,
+    isBlob,
+    isFormData,
+    isPlainObject,
+    isEmpty,
+} from './utils/typeutils';
+export {
+    globalContext,
+    globalCache,
+    globalLimitedDictionary,
+} from './utils/cacheutils';
+export {
+    callLater,
+    cancelCallLater,
+    requestFrame,
+    isPromiseLike,
+    isJQPromise,
+    isPromise,
+    isObservabeLike,
+    asPromise,
+} from './utils/asyncutils';
+export {
+    decoratorType,
+    decorator,
+} from './utils/decoratorutils';
+export {
+    createDate,
+    isValidDate,
+    getDateTime,
+    getDateTimeFromString,
+    getQuarterNumber,
+    getDateBoundary,
+} from './utils/dateutils';
+export {
+    findAValidValue,
+    switchItemTo,
+    switchIndexTo,
+    moveItemTo,
+    moveIndexTo,
+} from './utils/arrayutils';
+export {
+    uniqueId,
+    merge,
+    diffMerge,
+    deepEqual,
+    uuid,
+    INVALID_PROPERTY_ACCESS,
+    SubObjectAccessor,
+    ObjectAccessor,
+    copyTo,
+    extendsTo,
+} from './utils/objectutils';
 
 import * as colorutils from './utils/colorutils';
 import * as urlutils from './utils/urlutils';
