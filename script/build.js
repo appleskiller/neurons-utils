@@ -41,7 +41,7 @@ console.log(`Clear dist ...`);
 // ================================================
 // input base name
 const inputBaseName = path.basename(inputFile, '.ts');
-const compliedInputFile = `dist/${inputBaseName}.js`;
+const compliedInputFile = `dist/out-tsc/${inputBaseName}.js`;
 async function build(input, output) {
     // create a bundle
     const bundle = await rollup.rollup(input);
@@ -104,6 +104,10 @@ async function buildAll() {
         fs.copySync(path.resolve(__dirname, '../README.md'), path.resolve(__dirname, '../dist/README.md'));
     }
     console.log(`Copy package.json, LICENSE, README.md ...`);
+    // ------------------------------------------------
+    // clear build
+    // ================================================
+    fs.removeSync(path.resolve(__dirname, '../dist/out-tsc'));
     // ------------------------------------------------
     // done
     // ================================================
