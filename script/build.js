@@ -79,7 +79,7 @@ async function buildAll() {
         ...baseInputOption,
         plugins: [
             ...baseInputOption.plugins,
-            uglify()
+            // uglify()
         ],
         external: external,
     }, {
