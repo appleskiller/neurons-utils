@@ -344,7 +344,7 @@ function bound(n, max) {
     return (n % max) / parseFloat(max);
 }
 
-export function equal(color1: string, color2: string) {
+export function equals(color1: string, color2: string) {
     if (!color1 || !color2) return false;
     const rgba1 = toRGBAArray(color1);
     const rgba2 = toRGBAArray(color2);
