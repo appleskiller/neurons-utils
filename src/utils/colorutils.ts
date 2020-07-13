@@ -343,3 +343,13 @@ function bound(n, max) {
     if ((Math.abs(n - max) < 0.000001)) { return 1; }
     return (n % max) / parseFloat(max);
 }
+
+export function equal(color1: string, color2: string) {
+    if (!color1 || !color2) return false;
+    const rgba1 = toRGBAArray(color1);
+    const rgba2 = toRGBAArray(color2);
+    return rgba1[0] === rgba2[0]
+        && rgba1[1] === rgba2[1]
+        && rgba1[2] === rgba2[2]
+        && rgba1[3] === rgba2[3];
+}
