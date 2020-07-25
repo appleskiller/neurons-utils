@@ -37,7 +37,7 @@ export function unionFeatureBBox(bbox1: number[], bbox2: number[]) {
 // point
 function collectPoint(coordinate, bbox) {
     bbox = bbox || [];
-    if (coordinate.length === 2) {
+    if (coordinate.length >= 2) {
         const x = coordinate[0];
         const y = coordinate[1];
         if (bbox[0] === undefined) {
