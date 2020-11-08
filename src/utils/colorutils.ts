@@ -353,3 +353,32 @@ export function equals(color1: string, color2: string) {
         && rgba1[2] === rgba2[2]
         && rgba1[3] === rgba2[3];
 }
+
+export function gradientHex(from: string, to: string, step: number): string[] {
+    const fromArr = toRGBAArray(from);
+    const toArr = toRGBAArray(to);
+    const result = [];
+    for (let i = 0; i < step; i++) {
+        result.push(rgbToHexPound(
+            fromArr[0] + (toArr[0] - fromArr[0]) / step,
+            fromArr[1] + (toArr[1] - fromArr[1]) / step,
+            fromArr[2] + (toArr[2] - fromArr[2]) / step,
+        ));
+    }
+    return result;
+}
+
+export function gradientRgba(from: string, to: string, step: number): string[] {
+    const fromArr = toRGBAArray(from);
+    const toArr = toRGBAArray(to);
+    const result = [];
+    for (let i = 0; i < step; i++) {
+        result.push(rgbToCSSRGB(
+            fromArr[0] + (toArr[0] - fromArr[0]) / step,
+            fromArr[1] + (toArr[1] - fromArr[1]) / step,
+            fromArr[2] + (toArr[2] - fromArr[2]) / step,
+            fromArr[3] + (toArr[3] - fromArr[3]) / step,
+        ));
+    }
+    return result;
+}

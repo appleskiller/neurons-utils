@@ -81,108 +81,6 @@ export function merge(...args): any {
 }
 
 /**
- * Diffs merge 比较值变更，从source向target复制值。
- * 对于发生变更的叶子属性，将向根逐层执行浅复制
- * @author AK
- * @param target 目标对象
- * @param source 源对象
- * @returns 返回变化信息
- */
-export function diffMerge(target, source): any {
-    if (typeof source !== 'object' || typeof target !== 'object') {
-        return null;
-    }
-    const sourceIsArray = isArray(source);
-    const targetIsArray = isArray(target);
-    if ((targetIsArray && !sourceIsArray) || (!targetIsArray && sourceIsArray)) {
-        return null;
-    }
-    const collect = function (token, oldValue, newValue) {
-        if (!target && !source) return;
-        // token.changes[token.current.join('.')] = {
-        //     oldValue: oldValue,
-        //     newValue: newValue
-        // }
-        const last = token.current[token.current.length - 1];
-        let obj = token.object;
-        for (let i = 0; i < token.current.length - 1; i++) {
-            const key = token.current[i];
-            if (key in obj) {
-                obj = obj[key];
-            } else {
-                obj = obj[key] = {};
-            }
-        }
-        obj[last] = true;
-    }
-    const collecting = function (copy, original, token) {
-        const oriIsDate = isDate(original);
-        const oriIsArray = isArray(original);
-        const oriIsObject = isPlainObject(original);
-        if (oriIsDate && isDate(copy)) {
-            if (copy.getTime() !== original.getTime()) {
-                collect(token, copy, original);
-            }
-        } else if (oriIsArray && isArray(copy)) {
-            collectArray(copy, original, token);
-        } else if (original && oriIsObject && copy && typeof copy === 'object') {
-            collectObject(copy, original, token);
-        } else if (copy !== original) {
-            collect(token, copy, original);
-        }
-    }
-    const collectArray = function (copy, original, token) {
-        for (let i = 0; i < original.length; i++) {
-            token.current.push(i);
-            collecting(copy[i], original[i], token);
-            token.current.pop();
-        }
-        if (copy.length !== original.length) {
-            token.current.push('length');
-            collect(token, copy.length, original.length);
-            token.current.pop();
-        }
-    }
-    const collectObject = function (copy, original, token) {
-        for (let key in original) {
-            token.current.push(key);
-            collecting(copy[key], original[key], token);
-            token.current.pop();
-        }
-    };
-    const token = { changes: {}, current: [], object: {} };
-    if (isArray(source)) {
-        collectArray(target, source, token);
-    } else {
-        collectObject(target, source, token);
-    }
-    // 更新值
-    const mergeByMap = function (mapping, currentTarget, currentSource, depth) {
-        for (const key in mapping) {
-            if (depth === 0) {
-                // 只采集1级属性变更
-                token.changes[key] = {
-                    oldValue: currentTarget[key],
-                    newValue: currentSource[key]
-                }
-            }
-            if (mapping[key] === true) {
-                currentTarget[key] = currentSource[key];
-            } else {
-                if (isArray(currentTarget[key])) {
-                    currentTarget[key] = [...currentTarget[key]];
-                } else {
-                    currentTarget[key] = { ...currentTarget[key] };
-                }
-                mergeByMap(mapping[key], currentTarget[key], currentSource[key], depth + 1);
-            }
-        }
-    }
-    mergeByMap(token.object, target, source, 0);
-    return token.changes;
-}
-
-/**
  * Deeps equal
  * @author AK
  * @param obj1 
@@ -593,37 +491,119 @@ function normalizeMappings(mappings?: IConverterOption): IConverterMapping[] {
     return result;
 }
 
-function collectObjectMapping(object): IConverterOption {
+export function collectObjectMapping(object, skipArray = false): IConverterOption {
     if (!object) {
         return {};
     }
     const mapping: IConverterOption = {};
-    let propertyChain, index = 0, i, key, obj = object;
-    const arr = [{ propertyChain: '', object: obj }];
+    let pointer, index = 0, i, key, obj = object;
+    const arr = [{ pointer: '', object: obj }];
     while (index < arr.length) {
-        propertyChain = arr[index].propertyChain;
+        pointer = arr[index].pointer;
         obj = arr[index].object;
-        if (isArray(obj)) {
-            for (i = 0; i < obj.length; i++) {
-                arr.push({
-                    propertyChain: propertyChain ? `${propertyChain}.${i}` : `${i}`,
-                    object: obj[i]
-                });
+        if (isDate(obj)) {
+            pointer && (mapping[pointer] = pointer);
+        } else if (isArray(obj)) {
+            if (skipArray) {
+                pointer && (mapping[pointer] = pointer);
+            } else {
+                for (i = 0; i < obj.length; i++) {
+                    arr.push({
+                        pointer: pointer ? `${pointer}.${i}` : `${i}`,
+                        object: obj[i]
+                    });
+                }
             }
-        } else if (typeof obj === 'object' && !isDate(obj)) {
+        } else if (isPlainObject(obj)) {
             for (key in obj) {
                 arr.push({
-                    propertyChain: propertyChain ? `${propertyChain}.${key}` : `${key}`,
+                    pointer: pointer ? `${pointer}.${key}` : `${key}`,
                     object: obj[key]
                 });
             }
         } else {
-            propertyChain && (mapping[propertyChain] = propertyChain);
+            pointer && (mapping[pointer] = pointer);
         }
         index += 1;
     }
     return mapping;
 }
+export function collectObjectMappingValues(object, skipArray = false): {[key: string]: any} {
+    if (!object) {
+        return {};
+    }
+    const mapping = {};
+    let pointer, index = 0, i, key, obj = object;
+    const arr = [{ pointer: '', object: obj }];
+    while (index < arr.length) {
+        pointer = arr[index].pointer;
+        obj = arr[index].object;
+        if (isDate(obj)) {
+            pointer && (mapping[pointer] = obj);
+        } else if (isArray(obj)) {
+            if (skipArray) {
+                pointer && (mapping[pointer] = obj);
+            } else {
+                for (i = 0; i < obj.length; i++) {
+                    arr.push({
+                        pointer: pointer ? `${pointer}.${i}` : `${i}`,
+                        object: obj[i]
+                    });
+                }
+            }
+        } else if (isPlainObject(obj)) {
+            for (key in obj) {
+                arr.push({
+                    pointer: pointer ? `${pointer}.${key}` : `${key}`,
+                    object: obj[key]
+                });
+            }
+        } else {
+            pointer && (mapping[pointer] = obj);
+        }
+        index += 1;
+    }
+    return mapping;
+}
+
+export function spreadObjectWithPointers(object, skipArray = false): {[pointer: string]: string} {
+    if (!object) {
+        return {};
+    }
+    const result = {};
+    let jsonPointer, index = 0, i, key, obj = object;
+    const arr = [{ jsonPointer: '', object: obj }];
+    while (index < arr.length) {
+        jsonPointer = arr[index].jsonPointer;
+        obj = arr[index].object;
+        if (isArray(obj)) {
+            if (skipArray) {
+                jsonPointer && (result[jsonPointer] = jsonPointer);
+            } else {
+                for (i = 0; i < obj.length; i++) {
+                    arr.push({
+                        jsonPointer: jsonPointer ? `${jsonPointer}.${i}` : `${i}`,
+                        object: obj[i]
+                    });
+                }
+            }
+        } else if (isDate(obj)) {
+            jsonPointer && (result[jsonPointer] = jsonPointer);
+        } else if (isPlainObject(obj)) {
+            for (key in obj) {
+                arr.push({
+                    jsonPointer: jsonPointer ? `${jsonPointer}.${key}` : `${key}`,
+                    object: obj[key]
+                });
+            }
+        } else {
+            jsonPointer && (result[jsonPointer] = jsonPointer);
+        }
+        index += 1;
+    }
+    return result;
+}
+
 function obtainSourceValue(sourceAccessor: IObjectAccessor, mappings: IConverterMapping[]) {
     mappings = mappings || [];
     // sort by source prop length
@@ -724,4 +704,301 @@ export function extendsTo(target: Object, source: Object): any {
     const targetAccessor = new ObjectAccessor(target);
     targetAccessor.copyFrom(sourceAccessor, mapping);
     return targetAccessor.object;
+}
+
+function diffMergeBy(target: any, source: any, pointerMapping: {[pointer: string]: any}, hostKey = '', result?: IChainingChanges) {
+    result = result || new ChainingChanges();
+    if (!source || isEmpty(source)) return result;
+    let prop;
+    for (const key in source) {
+        prop = hostKey ? `${hostKey}.${key}` : key;
+        if (prop in pointerMapping) {
+            const value = source[key];
+            if (target[key] !== value) {
+                const old = target[key];
+                target[key] = value;
+                result.set(prop, value, old);
+            }
+        } else {
+            if (isPlainObject(source[key])) {
+                target[key] = target[key] || {};
+                diffMergeBy(target[key], source[key], pointerMapping, prop, result);
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * Diffs merge 比较值变更，从source向target复制值。
+ * 对于发生变更的叶子属性，将向根逐层执行浅复制
+ * @author AK
+ * @param target 目标对象
+ * @param source 源对象
+ * @returns 返回变化信息
+ */
+export function diffMerge(target, source, skipArray = false): any {
+    return diffMergeBy(target, source, collectObjectMapping(source, skipArray));
+}
+
+export interface IChainingChanges {
+    isEmpty(): boolean;
+    get(property: string): any;
+    getOld(property: string): any;
+    set(property: string, value: any, oldValue?: any): void;
+    has(property: string): boolean;
+    andHas(...properties: string[]): boolean;
+    orHas(...properties: string[]): boolean;
+    forEach(fn: (chainProperty: string, value, oldValue) => void);
+    forEachSub(property: string, fn: (chainProperty: string, value, oldValue) => void);
+    toActual(property?: string): any;
+}
+
+export function toActualObject(pointerValueHash: any, subPointer?: string): any {
+    if (!pointerValueHash) return null;
+    subPointer && (subPointer = subPointer + '.');
+    const accessor = new ObjectAccessor({});
+    Object.keys(pointerValueHash).forEach(key => {
+        if (subPointer) {
+            if (key.indexOf(subPointer) === 0) {
+                accessor.set(key.replace(subPointer, ''), pointerValueHash[key]);
+            }
+        } else {
+            accessor.set(key, pointerValueHash[key]);
+        }
+    });
+    return accessor.object;
+}
+
+export class ChainingChanges implements IChainingChanges {
+    static diffMerge(target: any, source: any, skipArray = false): IChainingChanges {
+        return diffMerge(target, source, skipArray);
+    }
+    static diffMergeBy(target: any, source: any, pointerMapping: {[pointer: string]: any}): IChainingChanges {
+        return diffMergeBy(target, source, pointerMapping);
+    }
+    private changeHash = {};
+    private oldHash = {};
+    isEmpty(): boolean {
+        return isEmpty(this.changeHash);
+    }
+    get(property: string): any {
+        return this.changeHash[property];
+    }
+    set(property: string, value: any, oldValue?: any): void {
+        this.changeHash[property] = value;
+        if (arguments.length === 3) {
+            this.oldHash[property] = oldValue;
+        }
+    }
+    getOld(property: string): any {
+        return this.oldHash[property];
+    }
+    has(property?: string): boolean {
+        if (!property) return !isEmpty(this.changeHash);
+        if (property in this.changeHash) return true;
+        property = property + '.';
+        for (const key in this.changeHash) {
+            if (key.indexOf(property) === 0) return true;
+        }
+        return false;
+    }
+    andHas(): boolean {
+        if (!arguments.length) return false;
+        for (let i = 0; i < arguments.length; i++) {
+            if (!this.has(arguments[i])) return false;
+        }
+        return true;
+    }
+    orHas(): boolean {
+        if (!arguments.length) return false;
+        for (let i = 0; i < arguments.length; i++) {
+            if (this.has(arguments[i])) return true;
+        }
+        return false;
+    }
+    forEach(fn: (chainProperty: string, value, oldValue) => void) {
+        if (!fn) return;
+        Object.keys(this.changeHash).forEach(prop => fn(prop, this.changeHash[prop], this.oldHash[prop]));
+    }
+    forEachSub(property: string, fn: (chainProperty: string, value, oldValue) => void) {
+        if (!property || !fn) return;
+        if (property in this.changeHash) {
+            fn('', this.changeHash[property], this.oldHash[property]);
+        } else {
+            property = property + '.';
+            Object.keys(this.changeHash).forEach(prop => {
+                if (prop.indexOf(property) === 0) {
+                    fn(prop.replace(property, ''), this.changeHash[prop], this.oldHash[prop])
+                }
+            });
+        }
+    }
+    toActual(property?: string): any {
+        return toActualObject(this.changeHash, property);
+    }
+}
+
+
+export type IConverter = (accessor: IObjectAccessor) => any;
+
+export interface ILevelOption {
+    data: any;
+    mapping?: {[property: string]: (string | IConverter)}
+}
+
+export interface IMultiLevelOption {
+    isMultiLevelOption: boolean;
+    has(propertyName): Boolean;
+    get(propertyName): any;
+    length(): number;
+    update(index: number, data: any): void;
+    nextLevel(dataOrOption: any | ILevelOption, isomorphic?: boolean): IMultiLevelOption;
+}
+
+interface ILevelOptionAccessor {
+    accessor: IObjectAccessor,
+    raw: any,
+    mapping: {[property: string]: (string | IConverter)},
+}
+
+export class MultiLevelOption implements IMultiLevelOption {
+    constructor(private _levelOptions: (any | ILevelOption | MultiLevelOption)[], isomorphic = false) {
+        if (isomorphic) {
+            this._dics = (this._levelOptions || []).map(opt => {
+                if (!opt) return null;
+                if (opt.isMultiLevelOption) {
+                    this._length += opt.length();
+                    return opt;
+                } else {
+                    this._length += 1;
+                    return {
+                        accessor: new ObjectAccessor(opt),
+                        raw: opt,
+                        mapping: null,
+                    }
+                }
+            }).filter(d => !!d);
+        } else {
+            this._dics = (this._levelOptions || []).map(opt => {
+                if (!opt) return null;
+                if (opt.isMultiLevelOption) {
+                    this._length += opt.length();
+                    this._length += 1;
+                    return opt;
+                } else {
+                    this._length += 1;
+                    return {
+                        accessor: new ObjectAccessor(opt.data),
+                        raw: opt.data,
+                        mapping: opt.mapping,
+                    }
+                }
+            }).filter(d => !!d);
+        }
+    }
+
+    static getValue(property, ...objects: any[]): any {
+        if (!property || !objects || !objects.length) return undefined;
+        let value;
+        for (let i = 0; i < objects.length; i++) {
+            const object = objects[i];
+            value = ObjectAccessor.get(object, property);
+            if (value !== undefined && value !== ObjectAccessor.INVALID_PROPERTY_ACCESS) {
+                return value;
+            }
+        }
+        return value;
+    }
+
+    public isMultiLevelOption = true;
+
+    private _dics: (ILevelOptionAccessor | MultiLevelOption)[] = [];
+    private _values: any = {};
+    private _length = 0;
+    length() {
+        return this._length;
+    }
+    has(propertyName) {
+        if (!this._dics[0]) return false;
+        if ((this._dics[0] as MultiLevelOption).isMultiLevelOption) {
+            return (this._dics[0] as MultiLevelOption).has(propertyName);
+        } else {
+            return propertyName in (this._dics[0] as ILevelOptionAccessor).mapping;
+        }
+    }
+    get(propertyName) {
+        if (propertyName in this._values) return this._values[propertyName];
+        let value;
+        for (let i = 0; i < this._dics.length; i++) {
+            const item = this._dics[i];
+            // 如果为MultiLevelOption
+            if ((item as MultiLevelOption).isMultiLevelOption) {
+                value = (item as MultiLevelOption).get(propertyName);
+            } else {
+                // 如果不设置mapping 则为对等的对象
+                const accessor = item as ILevelOptionAccessor;
+                if (!accessor.mapping) {
+                    value = accessor.accessor.get(propertyName);
+                } else {
+                    const converter = accessor.mapping[propertyName];
+                    if (!converter) continue;
+                    if (typeof converter === 'string') {
+                        value = accessor.accessor.get(converter);
+                    } else {
+                        value = converter(accessor.accessor);
+                    }
+                }
+            }
+            if (isDefined(value) && value !== ObjectAccessor.INVALID_PROPERTY_ACCESS) {
+                break;
+            }
+        }
+        value = isDefined(value) && value !== ObjectAccessor.INVALID_PROPERTY_ACCESS ? value : null;
+        this._values[propertyName] = value;
+        return value;
+    }
+    update(index: number, data: any) {
+        if (index >= this._length) return;
+        for (let i = 0; i < this._dics.length; i++) {
+            const item: any = this._dics[i];
+            if (item.isMultiLevelOption) {
+                if (item.length() > index) {
+                    item.update(index, data);
+                    break;
+                } else {
+                    index -= 1;
+                }
+            } else {
+                if (index <= 0) {
+                    item.raw = data;
+                    item.accessor = new ObjectAccessor(data);
+                } else {
+                    index -= 1;
+                }
+            }
+        }
+        // 清理缓存的值
+        this._values = {};
+    }
+    nextLevel(dataOrOption: any | ILevelOption, isomorphic = false) {
+        if (!dataOrOption) return this;
+        return new MultiLevelOption([dataOrOption, this], isomorphic);
+    }
+    assign(obj, mapping) {
+        if (!obj || !mapping) return obj;
+        const accessor = new ObjectAccessor(obj);
+        Object.keys(mapping).forEach(key => {
+            accessor.set(key, this.get(mapping[key]));
+        });
+        return obj;
+    }
+    compose(mapping) {
+        if (!mapping) return null;
+        const accessor = new ObjectAccessor({});
+        Object.keys(mapping).forEach(key => {
+            accessor.set(key, this.get(mapping[key]));
+        });
+        return accessor.object;
+    }
 }

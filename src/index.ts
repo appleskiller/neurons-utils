@@ -56,8 +56,13 @@ export {
     INVALID_PROPERTY_ACCESS,
     SubObjectAccessor,
     ObjectAccessor,
+    collectObjectMapping,
+    collectObjectMappingValues,
     copyTo,
     extendsTo,
+    toActualObject,
+    ChainingChanges,
+    MultiLevelOption,
 } from './utils/objectutils';
 
 import * as colorutils from './utils/colorutils';
@@ -65,6 +70,7 @@ import * as urlutils from './utils/urlutils';
 import * as geoutils from './utils/geoutils';
 import * as geometryutils from './utils/geometryutils';
 import * as mathutils from './utils/mathutils';
+import * as layoututils from './utils/layoututils';
 
 export class Map<K, V> {
     private _keys: K[] = [];
@@ -134,3 +140,4 @@ export const url = { ...urlutils };
 export const geo = { ...geoutils };
 export const geometry = { ...geometryutils };
 export const math = { ...mathutils };
+export const layout = { ...layoututils };
