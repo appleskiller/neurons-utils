@@ -27,7 +27,14 @@ export {
     isPromise,
     isObservabeLike,
     asPromise,
+    AnimationFrameTicker,
 } from './utils/asyncutils';
+
+import { AnimationFrameTicker, IAnimationFrameTicker } from './utils/asyncutils';
+export function createAnimationFrameTicker(onBeforeFrame?: () => void, onAfterFrame?: () => void): IAnimationFrameTicker {
+    return new AnimationFrameTicker(onBeforeFrame, onAfterFrame);
+}
+
 export {
     decoratorType,
     decorator,

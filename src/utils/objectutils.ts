@@ -706,23 +706,39 @@ export function extendsTo(target: Object, source: Object): any {
     return targetAccessor.object;
 }
 
-function diffMergeBy(target: any, source: any, pointerMapping: {[pointer: string]: any}, hostKey = '', result?: IChainingChanges) {
+function diffMergeBy(target: any, source: any, pointerMapping: {[pointer: string]: any}, hostKey = '', result?: IChainingChanges, targetAccessor?: IObjectAccessor, sourceAccessor?: IObjectAccessor) {
     result = result || new ChainingChanges();
     if (!source || isEmpty(source)) return result;
-    let prop;
+    targetAccessor = targetAccessor || new ObjectAccessor(target);
+    sourceAccessor = sourceAccessor || new ObjectAccessor(source);
+    let prop, value, targetKey, targetValue, mapping: ICommonMapping, skipSetter = false;
     for (const key in source) {
         prop = hostKey ? `${hostKey}.${key}` : key;
         if (prop in pointerMapping) {
-            const value = source[key];
-            if (target[key] !== value) {
-                const old = target[key];
-                target[key] = value;
-                result.set(prop, value, old);
+            targetKey = pointerMapping[prop];
+            value = source[key];
+            skipSetter = false;
+            if (typeof targetKey === 'string') {
+                targetValue = targetAccessor.get(targetKey, undefined);
+            } else if (targetKey && typeof targetKey === 'object') {
+                // ICommonMapping
+                mapping = targetKey;
+                targetKey = mapping.targetProperty;
+                skipSetter = mapping.skipSetter;
+                targetValue = mapping.converter(value, sourceAccessor, targetAccessor)
+            } else {
+                targetKey = prop;
+                targetValue = target[key];
+            }
+            // TODO 处理当skipSetter为true的情况
+            if (!skipSetter && targetValue !== value) {
+                targetAccessor.set(targetKey, value);
+                result.set(targetKey, value, targetValue);
             }
         } else {
             if (isPlainObject(source[key])) {
                 target[key] = target[key] || {};
-                diffMergeBy(target[key], source[key], pointerMapping, prop, result);
+                diffMergeBy(target[key], source[key], pointerMapping, prop, result, targetAccessor, sourceAccessor);
             }
         }
     }

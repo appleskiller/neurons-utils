@@ -99,6 +99,92 @@ export function requestFrame(fn: (elapsedTime: TlapsedTime) => void): CancelFram
     }
 }
 
+export type UnregisterFrameTickHandle = () => void;
+function emptyUnregisterFrameTickHandle() {};
+
+export interface IAnimationFrameTicker {
+    destroy(): void;
+    onTick(callback): UnregisterFrameTickHandle;
+    remove(callback): void;
+    once(callback): UnregisterFrameTickHandle;
+    suspend(): void;
+    resume(): void;
+}
+
+export class AnimationFrameTicker implements IAnimationFrameTicker {
+    constructor(private _onBeforeFrame?: () => void, private _onAfterFrame?: () => void) {}
+    private _destroyed = false;
+    private _destroyFrame;
+    private _handles = [];
+    destroy() {
+        this.suspend();
+        this._handles = [];
+        this._destroyed = true;
+    }
+    once(callback): UnregisterFrameTickHandle {
+        if (!callback) return emptyUnregisterFrameTickHandle;
+        callback['__tick_once__'] = true;
+        return this.onTick(callback);
+    }
+    onTick(callback): UnregisterFrameTickHandle {
+        if (!callback || this._destroyed) return emptyUnregisterFrameTickHandle;
+        if (this._handles.indexOf(callback) === -1) {
+            this._handles.push(callback);
+            this.resume();
+        }
+        return () => {
+            this.remove(callback);
+        };
+    }
+    remove(callback): void {
+        if (!callback || this._destroyed) return;
+        const index = this._handles.indexOf(callback);
+        if (index !== -1) {
+            this._handles.splice(index, 1);
+            if (!this._handles.length) {
+                this.suspend();
+            }
+        }
+    }
+    suspend() {
+        if (this._destroyed) return;
+        this._destroyFrame && this._destroyFrame();
+        this._destroyFrame = null;
+    }
+    resume() {
+        if (this._destroyed) return;
+        if (!this._destroyFrame && !!this._handles.length) {
+            this._destroyFrame = requestFrame(this._tickFunc);
+        }
+    }
+    private _onTick() {
+        if (this._destroyed) return;
+        const handles = this._handles;
+        // 用于接收新的函数
+        this._handles = [];
+        const oriStack = [];
+        for (let i = 0; i < handles.length; i++) {
+            handles[i]();
+            if (!handles[i]['__tick_once__']) {
+                oriStack.push(handles[i]);
+            } else {
+                delete handles[i]['__tick_once__'];
+            }
+        }
+        this._handles = oriStack.concat(this._handles);
+    }
+    private _tickFunc = () => {
+        this._onBeforeFrame && this._onBeforeFrame();
+        this._onTick();
+        this._onAfterFrame && this._onAfterFrame();
+        if (!this._handles.length) {
+            this.suspend();
+        } else {
+            this._destroyFrame && (this._destroyFrame = requestFrame(this._tickFunc));
+        }
+    }
+}
+
 export function isPromiseLike(p): boolean {
     return p && ('then' in p) && (typeof p.then === 'function');
 }
