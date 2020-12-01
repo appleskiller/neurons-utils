@@ -159,19 +159,18 @@ export class AnimationFrameTicker implements IAnimationFrameTicker {
     }
     private _onTick() {
         if (this._destroyed) return;
-        const handles = this._handles;
-        // 用于接收新的函数
-        this._handles = [];
-        const oriStack = [];
+        const handles = this._handles.concat();
         for (let i = 0; i < handles.length; i++) {
             handles[i]();
-            if (!handles[i]['__tick_once__']) {
-                oriStack.push(handles[i]);
-            } else {
+            if (handles[i]['__tick_once__']) {
                 delete handles[i]['__tick_once__'];
+                // 回调执行后，this._handles可能会被添加或删除，因此需要重新计算index
+                const index = this._handles.indexOf(handles[i]);
+                if (index !== -1) {
+                    this._handles.splice(index, 1);
+                }
             }
         }
-        this._handles = oriStack.concat(this._handles);
     }
     private _tickFunc = () => {
         this._onBeforeFrame && this._onBeforeFrame();
