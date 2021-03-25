@@ -71,6 +71,11 @@ export {
     ChainingChanges,
     MultiLevelOption,
 } from './utils/objectutils';
+export {
+    ClassAlias,
+    getClassByAlias,
+    newInstance,
+} from './utils/reflectorutils';
 
 import * as colorutils from './utils/colorutils';
 import * as urlutils from './utils/urlutils';
