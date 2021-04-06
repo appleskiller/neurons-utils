@@ -11,7 +11,7 @@ export function createDate(v): Date {
 }
 
 export function isValidDate(d: Date): boolean {
-    return d && !isNaN(d.getTime());
+    return d && isDate(d) && !isNaN(d.getTime());
 }
 
 export function getDateTime(v: any): number {
