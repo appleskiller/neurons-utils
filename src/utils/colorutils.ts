@@ -221,6 +221,50 @@ export function toRGBAArray(str) {
     }
 }
 
+export function toRGBAColor(str): string {
+    if (!str) return 'rgba(0,0,0,0)';
+    let arr;
+    if (str.charAt(0) === '#') {
+        if (str.length === 4) {
+            const arr = str.split('');
+            arr[1] = arr[1] + '' + arr[1];
+            arr[2] = arr[2] + '' + arr[2];
+            arr[3] = arr[3] + '' + arr[3];
+            str = arr.join('');
+        }
+        arr = cssHextoRGBAArray(str);
+        return rgbToCSSRGB(arr[0], arr[1], arr[2], arr[3]);
+    } else if (str.indexOf('0x') === 0) {
+        arr = xHextoRGBAArray(str);
+        return rgbToCSSRGB(arr[0], arr[1], arr[2], arr[3]);
+    } else if (str.indexOf('rgb(') === 0) {
+        return str.replace('rgb(', 'rgba(').replace(')', ',1)');
+    } else if (str.indexOf('rgba(') === 0) {
+        return str;
+    } else {
+        return 'rgba(0,0,0,0)';
+    }
+}
+
+export function toHexColor(str): string {
+    if (!str) return '#000000';
+    let arr;
+    if (str.charAt(0) === '#') {
+        return str;
+    } else if (str.indexOf('0x') === 0) {
+        arr = xHextoRGBAArray(str);
+        return rgbToHexPound(arr[0], arr[1], arr[2]);
+    } else if (str.indexOf('rgb(') === 0) {
+        arr = rgbaCSStoRGBAArray(str.replace('rgb(', 'rgba(').replace(')', ',1)'));
+        return rgbToHexPound(arr[0], arr[1], arr[2]);
+    } else if (str.indexOf('rgba(') === 0) {
+        arr = rgbaCSStoRGBAArray(str);
+        return rgbToHexPound(arr[0], arr[1], arr[2]);
+    } else {
+        return '#000000';
+    }
+}
+
 // pos: 0~1
 export function pickOneColor(color1, color2, pos) {
     const rgba1 = toRGBAArray(color1);
@@ -254,7 +298,19 @@ export function darkenColor(color, amount?) {
     const rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
     return rgbToCSSRGB(rgb[0], rgb[1], rgb[2], rgba[3]);
 }
-
+export function highlightColor(color, amount?) {
+    amount = (amount === 0) ? 0 : (amount || 5);
+    const rgba = toRGBAArray(color);
+    const hsl = rgbToHsl(rgba[0], rgba[1], rgba[2]);
+    if (hsl[2] > 65) {
+        hsl[2] = Math.min(hsl[2] - amount, 65);
+    } else {
+        hsl[2] = hsl[2] + amount;
+    }
+    hsl[2] = mathMin(100, mathMax(0, hsl[2]));
+    const rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
+    return rgbToCSSRGB(rgb[0], rgb[1], rgb[2], rgba[3]);
+}
 /**
  * Mixs color alpha 叠加指定颜色的alpha(0~1)值
  * @author AK

@@ -109,6 +109,7 @@ export interface IAnimationFrameTicker {
     once(callback): UnregisterFrameTickHandle;
     suspend(): void;
     resume(): void;
+    tok(): void;
 }
 
 export class AnimationFrameTicker implements IAnimationFrameTicker {
@@ -116,6 +117,8 @@ export class AnimationFrameTicker implements IAnimationFrameTicker {
     private _destroyed = false;
     private _destroyFrame;
     private _handles = [];
+    private _tiking = false;
+    private _tokOnce = false;
     destroy() {
         this.suspend();
         this._handles = [];
@@ -157,6 +160,14 @@ export class AnimationFrameTicker implements IAnimationFrameTicker {
             this._destroyFrame = requestFrame(this._tickFunc);
         }
     }
+    tok() {
+        if (this._destroyed) return;
+        if (!this._destroyFrame) {
+            this._destroyFrame = requestFrame(this._tickFunc);
+        } else if (this._tiking) {
+            this._tokOnce = true;
+        }
+    }
     private _onTick() {
         if (this._destroyed) return;
         const handles = this._handles.concat();
@@ -173,12 +184,15 @@ export class AnimationFrameTicker implements IAnimationFrameTicker {
         }
     }
     private _tickFunc = () => {
+        this._tiking = true;
         this._onBeforeFrame && this._onBeforeFrame();
         this._onTick();
         this._onAfterFrame && this._onAfterFrame();
-        if (!this._handles.length) {
+        this._tiking = false;
+        if (!this._handles.length && !this._tokOnce) {
             this.suspend();
         } else {
+            this._tokOnce = false;
             this._destroyFrame && (this._destroyFrame = requestFrame(this._tickFunc));
         }
     }
