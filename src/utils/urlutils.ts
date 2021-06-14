@@ -146,11 +146,83 @@ export function isUrl(value): boolean {
     return urlRegexp.test(value);
 }
 
-export function basename(url: string): string {
+function basename(url: string): string {
     let idx = url.lastIndexOf('/')
     idx = idx > -1 ? idx : url.lastIndexOf('\\')
     if (idx < 0) {
-        return url
+        return url;
     }
     return url.substring(idx + 1);
+}
+
+function extname(url: string): string {
+    const index = url.lastIndexOf('.');
+    if (index !== -1) {
+        return url.substr(index).trim()
+    } else {
+        return '';
+    }
+}
+
+export interface IURL {
+    source: string;
+    protocol: string;
+    host: string;
+    port: string;
+    pathname: string;
+    query: string;
+    hash: string;
+    basename: string;
+    extname: string;
+}
+
+export function parseUrl(url: string): IURL {
+    const source = url;
+    url = (url || '').trim();
+    let protocol: string, host: string, search: string, pathname: string, hash: string, match;
+    if (isBrowser) {
+        const a = document.createElement('a'); 
+        a.href = url;
+        protocol = a.protocol || '';
+        host = a.host || '';
+        host.charAt(host.length - 1) === '/' && (host = host.substr(0, host.length - 1));
+        pathname = a.pathname || '';
+        pathname.charAt(pathname.length - 1) === '/' && (pathname = pathname.substr(0, pathname.length - 1));
+        search = a.search || '';
+        search.charAt(search.length - 1) === '/' && (search = search.substr(0, search.length - 1));
+        search && (search = search.substr(1));
+        hash = a.hash;
+    } else {
+        match = url.match(/^(.+)\:\/\//);
+        protocol = match ? match[0] : '';
+        protocol && (url = url.replace(protocol, ''));
+        protocol = protocol.replace('\/\/', '');
+        match = (url + '/').match(/(.+?)[\?\#\s\/]/);
+        host = match ? match[0] : '';
+        host.charAt(host.length - 1) === '/' && (host = host.substr(0, host.length - 1));
+        host && (url = url.replace(host, ''));
+        match = (url + '?').match(/(.+?)[\?\#\s]/);
+        pathname = match ? match[1] : '';
+        pathname.charAt(pathname.length - 1) === '/' && (pathname = pathname.substr(0, pathname.length - 1));
+        pathname && (url = url.replace(pathname, ''));
+        match = (url + '/').match(/\?(.+?)[\/\s]/);
+        search = match ? match[0] : '';
+        search.charAt(search.length - 1) === '/' && (search = search.substr(0, search.length - 1));
+        search && (url = url.replace(search, ''));
+        search && (search = search.substr(1));
+        match = url.match(/\#\/(.*)/);
+        hash = match ? match[0] : '';
+    }
+    const hosts = host.split(':');
+    return {
+        source: source,
+        protocol: protocol,
+        host: hosts.length === 2 ? hosts[0] : host,
+        port: hosts.length === 2 ? hosts[1] : '',
+        pathname: pathname,
+        query: search,
+        hash: hash,
+        basename: basename(pathname),
+        extname: extname(pathname),
+    }
 }
