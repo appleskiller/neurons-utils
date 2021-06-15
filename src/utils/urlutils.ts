@@ -158,7 +158,7 @@ function basename(url: string): string {
 function extname(url: string): string {
     const index = url.lastIndexOf('.');
     if (index !== -1) {
-        return url.substr(index).trim()
+        return url.substr(index + 1).trim()
     } else {
         return '';
     }
