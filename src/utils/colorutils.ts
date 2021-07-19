@@ -1,7 +1,11 @@
+import { globalCache } from "./cacheutils";
+
 /* tslint:disable */
 const mathMin = Math.min;
 const mathMax = Math.max;
 const mathAbs = Math.abs;
+
+const rgbaArrayCache = globalCache('parsed_rgba_color_array_cache');
 
 export function rgbaFadePair(start, end, spread) {
     var Rs = getSpread(start[0], end[0], spread);
@@ -201,6 +205,7 @@ export function rgbaCSStoRGBAArray(str){
 
 export function toRGBAArray(str) {
     if (!str) return [0,0,0,0];
+    if (rgbaArrayCache[str]) return rgbaArrayCache[str];
     if (str.charAt(0) === '#') {
         if (str.length === 4) {
             const arr = str.split('');
@@ -209,16 +214,17 @@ export function toRGBAArray(str) {
             arr[3] = arr[3] + '' + arr[3];
             str = arr.join('');
         }
-        return cssHextoRGBAArray(str);
+        rgbaArrayCache[str] = cssHextoRGBAArray(str);
     } else if (str.indexOf('0x') === 0) {
-        return xHextoRGBAArray(str);
+        rgbaArrayCache[str] = xHextoRGBAArray(str);
     } else if (str.indexOf('rgb(') === 0) {
-        return rgbaCSStoRGBAArray(str.replace('rgb(', 'rgba(').replace(')', ',1)'));
+        rgbaArrayCache[str] = rgbaCSStoRGBAArray(str.replace('rgb(', 'rgba(').replace(')', ',1)'));
     } else if (str.indexOf('rgba(') === 0) {
-        return rgbaCSStoRGBAArray(str);
+        rgbaArrayCache[str] = rgbaCSStoRGBAArray(str);
     } else {
-        return [0,0,0,0];
+        rgbaArrayCache[str] = [0,0,0,0];
     }
+    return rgbaArrayCache[str];
 }
 
 export function toRGBAColor(str): string {
@@ -437,4 +443,32 @@ export function gradientRgba(from: string, to: string, step: number): string[] {
         ));
     }
     return result;
+}
+
+export function gradientRgbaBy(from: string, to: string, percent: number): string {
+    const fromArr = toRGBAArray(from);
+    const toArr = toRGBAArray(to);
+    return rgbToCSSRGB(
+        fromArr[0] + (toArr[0] - fromArr[0]) * percent,
+        fromArr[1] + (toArr[1] - fromArr[1]) * percent,
+        fromArr[2] + (toArr[2] - fromArr[2]) * percent,
+        fromArr[3] + (toArr[3] - fromArr[3]) * percent,
+    );
+}
+
+export function gradientRgbaFromArray(colors: string[], percent: number): string {
+    if (!colors || !colors.length) return null;
+    if (colors.length <= 1) return colors[0];
+    if (!percent) return colors[0];
+    if (percent >= 1) return colors[colors.length -1];
+    const ratio = 1 / (colors.length - 1);
+    let rr = percent / ratio;
+    if (rr < 0) {
+        return gradientRgbaBy(colors[0], colors[1], rr);
+    } else {
+        const index = Math.floor(rr);
+        rr = rr - index;
+        if (!rr) return colors[index];
+        return gradientRgbaBy(colors[index], colors[index + 1], rr);
+    }
 }
