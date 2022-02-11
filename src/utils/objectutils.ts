@@ -232,6 +232,7 @@ export class ObjectAccessor implements IObjectAccessor {
         const accessor = new ObjectAccessor(object);
         accessor.set(pointer, value);
     }
+    // 如果设置了默认值，则在获取链式属性值过程中自动创建不存在的属性对象
     get(propertyChain: string, defaultValue?: any): any {
         if (!propertyChain) {
             return this.object;
@@ -699,7 +700,7 @@ export function extendsTo(target: Object, source: Object): any {
     if (!source || !target) {
         return target;
     }
-    const mapping = collectObjectMapping(target);
+    const mapping = collectObjectMapping(source, true);
     const sourceAccessor = new ObjectAccessor(source);
     const targetAccessor = new ObjectAccessor(target);
     targetAccessor.copyFrom(sourceAccessor, mapping);
