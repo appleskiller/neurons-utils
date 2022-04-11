@@ -1,4 +1,5 @@
 import { globalCache } from "./cacheutils";
+import { isDefined } from "./typeutils";
 
 /* tslint:disable */
 const mathMin = Math.min;
@@ -133,12 +134,65 @@ export function rgbToXHex(r, g, b) {
 export function rgbToHexPound(r, g, b) {
     return "#" + toHex(r) + toHex(g) + toHex(b);
 };
+// 0 ~ 255
 export function rgbToCSSRGB(r, g, b, a) {
     return "rgba(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + "," + (Math.round(a) / 255) + ")";
 };
 export function rgbToHexForKML(r, g, b, a) {
     return toHex(a) + toHex(g) + toHex(b) + toHex(r);
 };
+// h: 0 ~ 255, s: 0 ~ 255, v: 0 ~ 255
+export function hsvToRgb(h, s, v) {
+    h = normalizeColorValue(h, 360) * 6 / 360;
+    s = Math.min(100, Math.max(0, s)) / 100;
+    v = Math.min(100, Math.max(0, v)) / 100;
+
+    let i = Math.floor(h),
+        f = h - i,
+        p = v * (1 - s),
+        q = v * (1 - f * s),
+        t = v * (1 - (1 - f) * s),
+        mod = i % 6,
+        r = [v, q, p, p, t, v][mod],
+        g = [t, v, v, q, p, p][mod],
+        b = [p, p, t, v, v, q][mod];
+    return [r * 255, g * 255, b * 255];
+}
+// r: 0 ~ 255, g: 0 ~ 255, b: 0 ~ 255
+export function rgbToHsv(r, g, b) {
+    r = Math.min(255, Math.max(0, r)) / 255;
+    g = Math.min(255, Math.max(0, g)) / 255;
+    b = Math.min(255, Math.max(0, b)) / 255;
+
+    var max = mathMax(r, g, b), min = mathMin(r, g, b);
+    var h, s, v = max;
+
+    var d = max - min;
+    s = max === 0 ? 0 : d / max;
+
+    if(max == min) {
+        h = 0; // achromatic
+    }
+    else {
+        switch(max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return [h * 360, s * 100, v * 100];
+}
+// h: 0 ~ 360, s: 0 ~ 100, v: 0 ~ 100
+export function hsvToHsl(h, s, v) {
+    const rgb = hsvToRgb(h, s, v);
+    return rgbToHsl(rgb[0], rgb[1], rgb[2]);
+}
+// h: 0 ~ 360, s: 0 ~ 100, l: 0 ~ 100
+export function hslToHsv(h, s, l) {
+    const rgb = hslToRgb(h, s, l);
+    return rgbToHsv(rgb[0], rgb[1], rgb[2]);
+}
 export function toHex(n) {
 	n = parseInt(n, 10);
 	if (isNaN(n)) {
@@ -344,7 +398,7 @@ export function changeColorAlpha(color, alpha) {
 }
 
 // 0, 255 => [0~360, 0~100, 0~100]
-function rgbToHsl(r, g, b) {
+export function rgbToHsl(r, g, b) {
     r = bound(r, 255);
     g = bound(g, 255);
     b = bound(b, 255);
@@ -370,7 +424,7 @@ function rgbToHsl(r, g, b) {
 }
 
 // [0~360, 0~100, 0~100] => [0, 255]
-function hslToRgb(h, s, l) {
+export function hslToRgb(h, s, l) {
     var r, g, b;
     h = bound(h, 360);
     s = bound(s, 100);
@@ -455,6 +509,21 @@ export function gradientRgbaBy(from: string, to: string, percent: number): strin
         fromArr[3] + (toArr[3] - fromArr[3]) * percent,
     );
 }
+// percent 0 ~ 1
+export function linearGradientRgbaBy(from: string, to: string, percent: number): string {
+    const fromArr = toRGBAArray(from);
+    const fromHsl = rgbToHsl(fromArr[0], fromArr[1], fromArr[2]);
+    const toArr = toRGBAArray(to);
+    const toHsl = rgbToHsl(toArr[0], toArr[1], toArr[2]);
+    // [0~360, 0~100, 0~100] => [0, 255]
+    const rgb = hslToRgb(
+        fromHsl[0] + (toHsl[0] - fromHsl[0]) * percent,
+        fromHsl[1] + (toHsl[1] - fromHsl[1]) * percent,
+        fromHsl[2] + (toHsl[2] - fromHsl[2]) * percent,
+    );
+    const alpha = fromArr[3] + (toArr[3] - fromArr[3]) * percent;
+    return rgbToCSSRGB(rgb[0], rgb[1], rgb[2], alpha * 255);
+}
 
 export function gradientRgbaFromArray(colors: string[], percent: number): string {
     if (!colors || !colors.length) return null;
@@ -471,4 +540,115 @@ export function gradientRgbaFromArray(colors: string[], percent: number): string
         if (!rr) return colors[index];
         return gradientRgbaBy(colors[index], colors[index + 1], rr);
     }
+}
+
+function normalizeColorValue(value: number, max: number = 1, min: number = 0): number {
+    const range = max - min;
+    value = value % range;
+    return value < 0 ? min + range + value : min + value;
+}
+
+// 线性色环（red, yellow, lime, aqua, blue, magenta）数列
+const templateHues = [0, 0, 15, 8, 30, 17, 45, 26, 60, 34, 75, 41, 90, 48, 105, 54, 120, 60, 135, 81, 150, 103, 165, 123, 180, 138, 195, 155, 210, 171, 225, 187, 240, 204, 255, 219, 270, 234, 285, 251, 300, 267, 315, 282, 330, 298, 345, 329, 360, 360];
+export function wheelHueToHue(hue) {
+    for (let i = 0; i < templateHues.length - 2; i += 2) {
+        const h1 = templateHues[i];
+        const h2 = templateHues[i + 1];
+        const h3 = templateHues[i + 2];
+        const h4 = templateHues[i + 3];
+        if (hue <= h3 && hue >= h1) {
+            return h2 + (h4 - h2) * (hue - h1) / (h3 - h1)
+        }
+    }
+}
+
+export const colorWheel360Hues: number[] = [];
+for (let i = 0; i <= 360; i += 1) {
+    // colorWheel360Hues.push(i);
+    colorWheel360Hues.push(wheelHueToHue(i));
+}
+export function wheelHueToHueFast(hue: number) {
+    if (!hue) return 0;
+    hue = Math.round(normalizeColorValue(hue, 360));
+    return Math.round(colorWheel360Hues[hue]);
+}
+
+export function hueToWheelHueFast(hue: number) {
+    if (!hue) return 0;
+    if (hue === 360) return 360;
+    const indexRange = [0, 360];
+    let medianIndex, median;
+    while (indexRange[0] !== indexRange[1] && indexRange[1] - indexRange[0] > 1) {
+        medianIndex = indexRange[0] + Math.floor((indexRange[1] - indexRange[0]) / 2);
+        median = colorWheel360Hues[medianIndex];
+        if (hue === median) return medianIndex;
+        if (hue > median) {
+            // 向后计算
+            indexRange[0] = medianIndex;
+        } else {
+            // 向前计算
+            indexRange[1] = medianIndex;
+        }
+    }
+    if (Math.round(hue) === Math.round(colorWheel360Hues[indexRange[0]])) return indexRange[0];
+    return indexRange[1];
+}
+
+/**
+ * 从标准色环的指定位置取出一个颜色
+ * @param hue 色相值 0 ~ 360
+ * @param saturation 饱和度 0 ~ 100 默认100
+ * @param lightness 明度 0 ~ 100。默认为90
+ * @param alpha 颜色透明度 0 ~ 1。默认为1
+ */
+export function linearGradientFromColorWheel(hue: number, saturation: number = 100, lightness: number = 50, alpha: number = 1) {
+    hue = wheelHueToHueFast(normalizeColorValue(hue, 360));
+    saturation = Math.min(100, Math.max(0, saturation));
+    lightness = Math.min(100, Math.max(0, lightness));
+    alpha = Math.min(100, Math.max(0, alpha));
+    const rgb = hslToRgb(hue, saturation, lightness);
+    
+    return rgbToCSSRGB(rgb[0], rgb[1], rgb[2], alpha * 255);
+}
+
+/**
+ * 从标准色环中均匀的取出多个颜色
+ * @param count 要取出颜色的数量
+ * @param hue 起始色相值
+ * @param saturation 饱和度 0 ~ 100 默认100
+ * @param lightness 明度 0 ~ 100。默认为90
+ * @param alpha 颜色透明度 0 ~ 1。默认为1
+ */
+ export function linearGradientPalleteFromColorWheel(count: number, hue: number = 0, saturation: number = 100, lightness: number = 50, alpha: number = 1): string[] {
+    if (count <= 0) return [];
+    const colors = [];
+    const distance = 360 / count;
+    for (let i = 0; i < count; i++) {
+        colors.push(linearGradientFromColorWheel(hue + distance * i, saturation, lightness, alpha));
+    }
+    return colors;
+}
+
+/**
+ * 从标准色环中特定的范围内，均匀的取出多个颜色
+ * @param count 要取出颜色的数量
+ * @param fromHue 起点色相值
+ * @param toHue 重点色相值
+ * @param saturation 饱和度 0 ~ 100 默认100
+ * @param lightness 明度 0 ~ 100。默认为90
+ * @param alpha 颜色透明度 0 ~ 1。默认为1
+ */
+ export function linearGradientRangeFromColorWheel(count: number, fromHue: number, toHue: number, saturation: number = 100, lightness: number = 50, alpha: number = 1): string[] {
+    if (count <= 0) return [];
+    fromHue = normalizeColorValue(fromHue, 360);
+    toHue = normalizeColorValue(toHue, 360);
+    if (toHue < fromHue) {
+        toHue += 360;
+    }
+    const colors = [];
+    const distance = (toHue - fromHue) / count;
+    for (let i = 0; i < count; i++) {
+        colors.push(linearGradientFromColorWheel(fromHue + distance * i, saturation, lightness, alpha));
+    }
+    return colors;
 }
