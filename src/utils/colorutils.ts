@@ -136,7 +136,7 @@ export function rgbToHexPound(r, g, b) {
 };
 // 0 ~ 255
 export function rgbToCSSRGB(r, g, b, a) {
-    return "rgba(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + "," + (Math.round(a) / 255) + ")";
+    return "rgba(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + "," + (Math.round(a * 100 / 255) / 100) + ")";
 };
 export function rgbToHexForKML(r, g, b, a) {
     return toHex(a) + toHex(g) + toHex(b) + toHex(r);
@@ -256,7 +256,7 @@ export function rgbaCSStoRGBAArray(str){
   var a = Number(str.split(",")[3].split(")")[0]);
   return [r,g,b,a*255];
 }
-
+// a - 0 ~ 255
 export function toRGBAArray(str) {
     if (!str) return [0,0,0,0];
     if (rgbaArrayCache[str]) return rgbaArrayCache[str];
