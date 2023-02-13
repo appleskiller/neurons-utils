@@ -181,8 +181,10 @@ export const INVALID_PROPERTY_ACCESS = '__INVALID_PROPERTY_ACCESS__';
 
 export interface IObjectAccessor {
     get(propertyChain: string, defaultValue?: any): any;
-    union(props: string[]): any[];
     set(propertyChain: string, value: any): void;
+    del(propertyChain: string);
+    ensure(propertyChain: string, defaultValue?: any): void;
+    union(props: string[]): any[];
     sub(propertyChain: string): SubObjectAccessor;
     copyFrom(sourceAccessor: ObjectAccessor, mappings?: IConverterOption);
 }
@@ -197,11 +199,17 @@ export class SubObjectAccessor implements IObjectAccessor {
             return this.host.get(`${this.hostProperty}.${propertyChain}`);
         }
     }
-    union(props: string[]): any[] {
-        return this.host.union(props.map((p) => `${this.hostProperty}.${p}`));
-    }
     set(propertyChain: string, value: any): void {
         return this.host.set(`${this.hostProperty}.${propertyChain}`, value);
+    }
+    del(propertyChain: string) {
+        return this.host.del(`${this.hostProperty}.${propertyChain}`);
+    }
+    ensure(propertyChain: string, defaultValue: any = undefined): void {
+        this.host.ensure(`${this.hostProperty}.${propertyChain}`, defaultValue);
+    }
+    union(props: string[]): any[] {
+        return this.host.union(props.map((p) => `${this.hostProperty}.${p}`));
     }
     sub(propertyChain: string): SubObjectAccessor {
         return new SubObjectAccessor(`${this.hostProperty}.${propertyChain}`, this.host);
@@ -231,6 +239,14 @@ export class ObjectAccessor implements IObjectAccessor {
     static set(object, pointer, value) {
         const accessor = new ObjectAccessor(object);
         accessor.set(pointer, value);
+    }
+    static del(object, propertyChain: string) {
+        const accessor = new ObjectAccessor(object);
+        accessor.del(propertyChain);
+    }
+    static ensure(object, propertyChain: string, defaultValue: any = undefined): void {
+        const accessor = new ObjectAccessor(object);
+        accessor.ensure(propertyChain, defaultValue);
     }
     // 如果设置了默认值，则在获取链式属性值过程中自动创建不存在的属性对象
     get(propertyChain: string, defaultValue?: any): any {
@@ -264,12 +280,6 @@ export class ObjectAccessor implements IObjectAccessor {
         }
         return INVALID_PROPERTY_ACCESS;
     }
-    union(props: string[]): any[] {
-        if (!props) {
-            return null;
-        }
-        return props.map((prop) => this.get(prop));
-    }
     set(propertyChain: string, value: any): void {
         if (propertyChain) {
             const splited = this._splitChainProp(propertyChain);
@@ -281,6 +291,40 @@ export class ObjectAccessor implements IObjectAccessor {
                 } catch (err) { }
             }
         }
+    }
+    ensure(propertyChain: string, defaultValue: any = undefined): void {
+        if (propertyChain) {
+            const splited = this._splitChainProp(propertyChain);
+            const obj = this._getOrCreate(splited[0]);
+            if (obj && obj !== INVALID_PROPERTY_ACCESS) {
+                if (splited[1] in obj) return;
+                obj[splited[1]] = defaultValue;
+                this._history[propertyChain] = defaultValue;
+            }
+        }
+    }
+    del(propertyChain: string) {
+        if (propertyChain) {
+            const splited = this._splitChainProp(propertyChain);
+            const obj = this._getOrCreate(splited[0]);
+            if (obj && obj !== INVALID_PROPERTY_ACCESS) {
+                if (isArray(obj)) {
+                    const index = parseInt(splited[1]);
+                    if (!isNaN(index) && index >= 0 && index < obj.length) {
+                        obj.splice(index, 1);
+                    }
+                } else {
+                    delete obj[splited[1]];
+                    delete this._history[propertyChain]
+                }
+            }
+        }
+    }
+    union(props: string[]): any[] {
+        if (!props) {
+            return null;
+        }
+        return props.map((prop) => this.get(prop));
     }
     sub(propertyChain: string): SubObjectAccessor {
         return new SubObjectAccessor(propertyChain, this);
