@@ -286,7 +286,12 @@ export class ObjectAccessor implements IObjectAccessor {
             const obj = this._getOrCreate(splited[0]);
             if (obj && obj !== INVALID_PROPERTY_ACCESS) {
                 try {
+                    const old = obj[splited[1]];
                     obj[splited[1]] = value;
+                    // 如果old为复杂对象，则需要清理缓存
+                    if (isDefined(old) && typeof old === 'object') {
+                        this._cleanHistory(propertyChain);
+                    }
                     this._history[propertyChain] = value;
                 } catch (err) { }
             }
@@ -308,14 +313,21 @@ export class ObjectAccessor implements IObjectAccessor {
             const splited = this._splitChainProp(propertyChain);
             const obj = this._getOrCreate(splited[0]);
             if (obj && obj !== INVALID_PROPERTY_ACCESS) {
+                let old;
                 if (isArray(obj)) {
                     const index = parseInt(splited[1]);
                     if (!isNaN(index) && index >= 0 && index < obj.length) {
-                        obj.splice(index, 1);
+                        old = obj.splice(index, 1)[0];
                     }
                 } else {
+                    old = obj[splited[1]];
                     delete obj[splited[1]];
-                    delete this._history[propertyChain]
+                }
+                // 如果old为复杂对象，则需要清理缓存
+                if (isDefined(old) && typeof old === 'object') {
+                    this._cleanHistory(propertyChain);
+                } else {
+                    delete this._history[propertyChain];
                 }
             }
         }
@@ -378,6 +390,13 @@ export class ObjectAccessor implements IObjectAccessor {
     private _splitChainProp(propertyChain: string): string[] {
         const ind = propertyChain.lastIndexOf('.');
         return [propertyChain.substring(0, ind), propertyChain.substr(ind + 1)];
+    }
+    private _cleanHistory(propertyChain: string) {
+        Object.keys(this._history).forEach(chain => {
+            if (chain.indexOf(propertyChain) === 0) {
+                delete this._history[chain];
+            }
+        })
     }
 }
 
