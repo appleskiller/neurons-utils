@@ -187,6 +187,7 @@ export interface IObjectAccessor {
     union(props: string[]): any[];
     sub(propertyChain: string): SubObjectAccessor;
     copyFrom(sourceAccessor: ObjectAccessor, mappings?: IConverterOption);
+    cleanCache(propertyChain?: string): void;
 }
 
 
@@ -200,10 +201,10 @@ export class SubObjectAccessor implements IObjectAccessor {
         }
     }
     set(propertyChain: string, value: any): void {
-        return this.host.set(`${this.hostProperty}.${propertyChain}`, value);
+        this.host.set(`${this.hostProperty}.${propertyChain}`, value);
     }
     del(propertyChain: string) {
-        return this.host.del(`${this.hostProperty}.${propertyChain}`);
+        this.host.del(`${this.hostProperty}.${propertyChain}`);
     }
     ensure(propertyChain: string, defaultValue: any = undefined): void {
         this.host.ensure(`${this.hostProperty}.${propertyChain}`, defaultValue);
@@ -225,6 +226,9 @@ export class SubObjectAccessor implements IObjectAccessor {
             obtainSourceValue(sourceAccessor, fullMappings);
             applyTargetValue(sourceAccessor, this, fullMappings);
         }
+    }
+    cleanCache(propertyChain?: string): void {
+        this.host.cleanCache(`${this.hostProperty}.${propertyChain}`);
     }
 }
 
@@ -363,6 +367,9 @@ export class ObjectAccessor implements IObjectAccessor {
         // 复制
         applyTargetValue(sourceAccessor, this, fullMappings);
     }
+    cleanCache(propertyChain?: string): void {
+        this._cleanHistory(propertyChain);
+    }
     private _getOrCreate(propertyChain: string): any {
         if (!propertyChain) {
             return this.object;
@@ -392,11 +399,15 @@ export class ObjectAccessor implements IObjectAccessor {
         return [propertyChain.substring(0, ind), propertyChain.substr(ind + 1)];
     }
     private _cleanHistory(propertyChain: string) {
-        Object.keys(this._history).forEach(chain => {
-            if (chain.indexOf(propertyChain) === 0) {
-                delete this._history[chain];
-            }
-        })
+        if (propertyChain) {
+            Object.keys(this._history).forEach(chain => {
+                if (chain.indexOf(propertyChain) === 0) {
+                    delete this._history[chain];
+                }
+            })
+        } else {
+            this._history = {};
+        }
     }
 }
 
