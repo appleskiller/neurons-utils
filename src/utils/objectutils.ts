@@ -774,11 +774,27 @@ export function extendsTo(target: Object, source: Object): any {
     if (!source || !target) {
         return target;
     }
-    const mapping = collectObjectMapping(source, true);
+    const sourcesMapping = collectObjectMapping(source, true);
+    const targetMapping = collectObjectMapping(target, true);
+    const mapping = clearMapping(sourcesMapping, targetMapping);
     const sourceAccessor = new ObjectAccessor(source);
     const targetAccessor = new ObjectAccessor(target);
     targetAccessor.copyFrom(sourceAccessor, mapping);
     return targetAccessor.object;
+}
+/**
+ * 依据target提供的mapping，清理source提供的mapping中所不存在的属性，返回一个新的mapping
+ * @param source 
+ * @param target 
+ */
+function clearMapping(source: IConverterOption, target: IConverterOption): IConverterOption {
+    const result = {};
+    Object.keys(target).forEach(key => {
+        if (source[key]) {
+            result[key] = source[key];
+        }
+    });
+    return result;
 }
 
 function diffMergeBy(target: any, source: any, pointerMapping: {[pointer: string]: any}, hostKey = '', result?: IChainingChanges, targetAccessor?: IObjectAccessor, sourceAccessor?: IObjectAccessor) {
